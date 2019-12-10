@@ -8,27 +8,21 @@
 
 (provide read-syntax)
 
-(define-macro (stacker-module-begin HANDLE-EXPR ...)
-  #'(#%module-begin HANDLE-EXPR ... (first stack)))
+;; Creating Expander Macro
+(define-macro (funstacker-module-begin HANDLE-ARGS-EXPR)
+  #'(#%module-begin
+     (first HANDLE-ARGS-EXPR)))
 
-(provide (rename-out [stacker-module-begin #%module-begin]))
+(provide (rename-out [funstacker-module-begin #%module-begin]))
 
-;; Stack Implmentation
-(define stack empty)
+;; Handle-Args
+(define (handle-args . args)
+  (for/fold ([stack-acc empty])
+            ([arg (in-list args)] #:unless (void? arg))
+    (cond [(number? arg) (cons arg stack-acc)]
+          [(or (equal? + arg) (equal? * arg))
+           (define op-result (arg (first stack-acc) (second stack-acc)))
+           (cons op-result (drop stack-acc 2))])))
 
-(define (pop-stack!)
-  (define arg (first stack))
-  (set! stack (rest stack))
-  arg)
-
-(define (push-stack! arg)
-  (set! stack (cons arg stack)))
-
-;; Handle Function : X -> Void
-;; Handle evaluates the next token/argument and decides what to do with it
-(define (handle [arg #f])
-  (cond [(number? arg) (push-stack! arg)]
-        [(or (equal? + arg) (equal? * arg)) (push-stack! (arg (pop-stack!) (pop-stack!)))]))
-
-(provide handle)
+(provide handle-args)
 (provide + *)
